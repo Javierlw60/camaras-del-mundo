@@ -4,26 +4,15 @@
   "description": "Panel de cámaras de tráfico y webcams públicas de todo el mundo: mapa, instantáneas y transmisiones en directo.",
   "lang": "es",
   "dir": "ltr",
-  "start_url": "./index.html",
-  "scope": "./",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
   "categories": ["navigation", "travel", "utilities"],
   "icons": [
-    {
-      "src": "icono.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "icono.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    },
     {
       "src": "icono-192.png",
       "sizes": "192x192",
@@ -34,7 +23,13 @@
       "src": "icono-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
