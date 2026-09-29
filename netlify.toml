@@ -1,3 +1,8 @@
 [build]
   publish = "."
   command = "echo 'Static site ready'"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
