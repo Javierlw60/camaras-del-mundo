@@ -1160,12 +1160,11 @@ function abrirModal() {
   const modal = $("#modal");
   modal.classList.add("open");
 
-  // En PWA/standalone, el gesto de volver del móvil debe cerrar la vista
-  // actual y no salir de la aplicación. Por eso se crea una entrada real
-  // del historial antes de abrir el modal.
-  const url = new URL(window.location.href);
-  if (!url.hash || url.hash !== "#modal-abierto") {
-    window.history.pushState({ modalAbierto: true }, "", `${url.pathname}${url.search}#modal-abierto`);
+  // En modo standalone/PWA, el back gesture del sistema solo se comporta
+  // como "cerrar modal" si hay una entrada real del historial asociada a "la
+  // vista abierta". Por eso usamos una URL hash y no un cierre artificial.
+  if (window.location.hash !== "#modal-abierto") {
+    window.history.pushState({ modalAbierto: true }, "", "#modal-abierto");
   }
 
   requestAnimationFrame(() => {
@@ -1188,8 +1187,9 @@ function cerrarModal() {
   delete img.dataset.raw;
   img.style.display = "none";
 
-  const url = new URL(window.location.href);
-  if (url.hash === "#modal-abierto" && window.history.state && window.history.state.modalAbierto) {
+  // No forzamos un historial "manual" del navegador si el cierre vino por
+  // la navegación real del sistema; solo limpiamos el hash si existe.
+  if (window.location.hash === "#modal-abierto" && window.history.state && window.history.state.modalAbierto) {
     window.history.back();
   }
 }
@@ -1409,16 +1409,17 @@ function registrarEventos() {
     } else if (accion === "borrar") borrarCamaraPropia(id);
   });
 
-  $("#btn-cerrar-modal").addEventListener("click", cerrarModal);
+  $("#btn-cerrar-modal").addEventListener("click", () => {
+    const modal = $("#modal");
+    if (!modal.classList.contains("open")) return;
+    cerrarModal();
+  });
   $("#modal").addEventListener("click", (e) => {
     if (e.target.id === "modal") cerrarModal();
   });
-  window.addEventListener("popstate", (e) => {
+  window.addEventListener("popstate", () => {
     const modal = $("#modal");
-    const modalPropia = $("#modal-propia");
-
     if (modal.classList.contains("open")) {
-      e.preventDefault();
       const video = $("#reproductor");
       video.pause();
       if (hlsActivo) { hlsActivo.destroy(); hlsActivo = null; }
@@ -1431,9 +1432,25 @@ function registrarEventos() {
       return;
     }
 
+    const modalPropia = $("#modal-propia");
     if (modalPropia.classList.contains("open")) {
-      e.preventDefault();
       modalPropia.classList.remove("open");
+    }
+  });
+  window.addEventListener("hashchange", () => {
+    if (window.location.hash !== "#modal-abierto") {
+      const modal = $("#modal");
+      if (modal.classList.contains("open")) {
+        const video = $("#reproductor");
+        video.pause();
+        if (hlsActivo) { hlsActivo.destroy(); hlsActivo = null; }
+        video.removeAttribute("src");
+        video.load();
+        modal.classList.remove("open");
+        const img = $("#imagen-grande");
+        delete img.dataset.raw;
+        img.style.display = "none";
+      }
     }
   });
   document.addEventListener("keydown", (e) => {
