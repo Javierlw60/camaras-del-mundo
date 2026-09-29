@@ -3,6 +3,6 @@
   command = "echo 'Static site ready'"
 
 [[headers]]
-  for = "/manifest.webmanifest"
+  for = "/manifest.json"
   [headers.values]
     Content-Type = "application/manifest+json"
