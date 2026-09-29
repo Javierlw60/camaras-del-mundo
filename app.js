@@ -747,7 +747,8 @@ function aplicarFiltros() {
   const soloFavoritos = $("#filtro-favoritos").checked;
   const vista = $("#vista-camaras")?.value || state.vistaActual || "todas";
   const cerca = state.filtroCercania && state.usuario;
-  const modoLiviano = state.cargaLiviana && !q && !pais && !region && !tipo && !soloVideo && !soloFavoritos && vista === "todas" && !cerca;
+  const paisLiviano = pais === "" || pais === DEFAULT_COUNTRY;
+  const modoLiviano = state.cargaLiviana && !q && !region && !tipo && !soloVideo && !soloFavoritos && vista === "todas" && !cerca && paisLiviano;
 
   state.vistaActual = vista;
 
