@@ -5,15 +5,16 @@
    ========================================================= */
 "use strict";
 
-const CACHE_STATIC = "radar-vial-estatico-v6";
-const CACHE_DATOS = "radar-vial-datos-v6";
-const CACHE_IMAGENES = "radar-vial-imagenes-v6";
+const CACHE_STATIC = "radar-vial-estatico-v7";
+const CACHE_DATOS = "radar-vial-datos-v7";
+const CACHE_IMAGENES = "radar-vial-imagenes-v7";
 
 const SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./manifest.json",
   "./manifest.webmanifest",
   "./icono.svg",
 ];

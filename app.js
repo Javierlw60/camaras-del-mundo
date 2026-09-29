@@ -194,6 +194,24 @@ function conCacheBuster(url) {
   return `${url}${sep}_rv=${Date.now()}`;
 }
 
+function esModoStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+}
+
+function prepararHistorialPwa() {
+  if (!esModoStandalone()) return;
+
+  const rutaBase = `${window.location.pathname}${window.location.search}`;
+  const estadoActual = window.history.state || {};
+  if (estadoActual.pwaRoot || estadoActual.modalAbierto) return;
+
+  const hayEntradaBase = window.history.length > 1;
+  if (!hayEntradaBase || !estadoActual.pwaRoot) {
+    window.history.pushState({ pwaRoot: true }, "", rutaBase);
+  }
+}
+
 function banderaCod(cod) {
   if (!cod || cod.length !== 2) return "🌍";
   return String.fromCodePoint(
@@ -1159,12 +1177,13 @@ function abrirWeb(id) {
 function abrirModal() {
   const modal = $("#modal");
   modal.classList.add("open");
+  prepararHistorialPwa();
 
-  // En modo standalone/PWA, el back gesture del sistema solo se comporta
-  // como "cerrar modal" si hay una entrada real del historial asociada a "la
-  // vista abierta". Por eso usamos una URL hash y no un cierre artificial.
+  // En modo standalone/PWA, el sistema solo interpreta el gesto de volver como
+  // cierre del modal si hay una entrada de historial asociada a la vista de la app.
+  // Si no existe esta base, el navegador puede salir de la PWA.
   if (window.location.hash !== "#modal-abierto") {
-    window.history.pushState({ modalAbierto: true }, "", "#modal-abierto");
+    window.history.pushState({ modalAbierto: true, pwaRoot: true }, "", "#modal-abierto");
   }
 
   requestAnimationFrame(() => {
@@ -1187,10 +1206,14 @@ function cerrarModal() {
   delete img.dataset.raw;
   img.style.display = "none";
 
-  // No forzamos un historial "manual" del navegador si el cierre vino por
-  // la navegación real del sistema; solo limpiamos el hash si existe.
-  if (window.location.hash === "#modal-abierto" && window.history.state && window.history.state.modalAbierto) {
-    window.history.back();
+  if (window.location.hash === "#modal-abierto") {
+    const tieneEntradaBase = (window.history.length > 1) || (window.history.state && window.history.state.pwaRoot);
+    if (tieneEntradaBase) {
+      window.history.back();
+    } else {
+      window.history.pushState({ pwaRoot: true }, "", window.location.pathname + window.location.search);
+      window.history.replaceState({ pwaRoot: true }, "", window.location.pathname + window.location.search);
+    }
   }
 }
 
@@ -1482,6 +1505,7 @@ function debounce(fn, ms) {
 /* ---------------- Arranque ---------------- */
 
 document.addEventListener("DOMContentLoaded", () => {
+  prepararHistorialPwa();
   inyectarInterfaz();
   cargarFavoritos();
   registrarEventos();
