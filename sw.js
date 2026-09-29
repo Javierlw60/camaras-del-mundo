@@ -5,9 +5,9 @@
    ========================================================= */
 "use strict";
 
-const CACHE_STATIC = "radar-vial-estatico-v9";
-const CACHE_DATOS = "radar-vial-datos-v9";
-const CACHE_IMAGENES = "radar-vial-imagenes-v9";
+const CACHE_STATIC = "radar-vial-estatico-v10";
+const CACHE_DATOS = "radar-vial-datos-v10";
+const CACHE_IMAGENES = "radar-vial-imagenes-v10";
 
 const SHELL = [
   "./",
@@ -41,6 +41,12 @@ self.addEventListener("activate", (evento) => {
       )
     ).then(() => self.clients.claim())
   );
+});
+
+self.addEventListener("message", (evento) => {
+  if (evento.data && evento.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 function esImagen(url) {

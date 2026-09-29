@@ -230,9 +230,31 @@
       ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
     if ("serviceWorker" in navigator && !esVistaLocal) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js").then(async () => {
-          // Espera a que el service worker quede activo y lo muestra en el pie
+      window.addEventListener("load", async () => {
+        try {
+          const reg = await navigator.serviceWorker.register("sw.js?v=10", {
+            scope: "./",
+            updateViaCache: "none"
+          });
+
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            window.location.reload();
+          });
+
+          const actualizar = async () => {
+            try {
+              await reg.update();
+            } catch (err) {
+              console.warn("No se pudo actualizar el service worker:", err);
+            }
+          };
+
+          await actualizar();
+
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: "SKIP_WAITING" });
+          }
+
           const verEstado = async () => {
             const regs = await navigator.serviceWorker.getRegistrations();
             const activo = regs.some((r) => r.active);
@@ -245,11 +267,11 @@
             if (!activo) setTimeout(verEstado, 1200);
           };
           verEstado();
-        }).catch((err) => {
+        } catch (err) {
           const etiqueta = document.getElementById("estado-pwa");
           if (etiqueta) etiqueta.textContent = "⚠️ Sin service worker (se necesita https o localhost)";
           console.warn("Service worker no disponible:", err);
-        });
+        }
       });
     } else if ("serviceWorker" in navigator) {
       console.log("PWA desactivada en vista local para evitar cachés viejas");

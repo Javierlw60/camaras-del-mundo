@@ -14,7 +14,8 @@ const API_URL =
 
 const LOCAL_DATA = "camaras.json";
 const STORAGE_KEY = "***";
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 4;
+const DEFAULT_COUNTRY = "Argentina";
 
 /* ---------- Dataset mundial (se carga en vivo, con fuentes de respaldo) ---------- */
 const FUENTES_MUNDO = [
@@ -162,6 +163,7 @@ const state = {
   ordenActual: "pais",
   vistaActual: "todas",
   cargaExpandida: false,
+  cargaLiviana: true,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -745,33 +747,38 @@ function aplicarFiltros() {
   const soloFavoritos = $("#filtro-favoritos").checked;
   const vista = $("#vista-camaras")?.value || state.vistaActual || "todas";
   const cerca = state.filtroCercania && state.usuario;
+  const modoLiviano = state.cargaLiviana && !q && !pais && !region && !tipo && !soloVideo && !soloFavoritos && vista === "todas" && !cerca;
 
   state.vistaActual = vista;
 
-  state.filtradas = aplicarOrden(
-    state.camaras.filter((c) => {
-      if (pais && c.pais !== pais) return false;
-      if (region && c.region !== region) return false;
-      if (tipo && c.tipo !== tipo) return false;
-      if (soloVideo && !c.video) return false;
-      if (soloFavoritos && !esFavorita(c.id)) return false;
-      if (vista === "mis" && !c.propia) return false;
-      if (vista === "favoritas" && !esFavorita(c.id)) return false;
-      if (vista === "directo" && !c.video) return false;
-      if (cerca) {
-        if (!coordenadasValidas(c.lat, c.lon)) return false;
-        const distancia = distanciaKm(state.usuario.lat, state.usuario.lon, c.lat, c.lon);
-        if (distancia > state.radioCercaniaKm) return false;
-      }
-      if (q) {
-        const heno = `${c.nombre} ${c.ruta} ${c.region} ${c.tipo} ${c.pais}`.toLowerCase();
-        if (!heno.includes(q)) return false;
-      }
-      return true;
-    })
-  );
+  const base = state.camaras.filter((c) => {
+    if (pais && c.pais !== pais) return false;
+    if (region && c.region !== region) return false;
+    if (tipo && c.tipo !== tipo) return false;
+    if (soloVideo && !c.video) return false;
+    if (soloFavoritos && !esFavorita(c.id)) return false;
+    if (vista === "mis" && !c.propia) return false;
+    if (vista === "favoritas" && !esFavorita(c.id)) return false;
+    if (vista === "directo" && !c.video) return false;
+    if (cerca) {
+      if (!coordenadasValidas(c.lat, c.lon)) return false;
+      const distancia = distanciaKm(state.usuario.lat, state.usuario.lon, c.lat, c.lon);
+      if (distancia > state.radioCercaniaKm) return false;
+    }
+    if (q) {
+      const heno = `${c.nombre} ${c.ruta} ${c.region} ${c.tipo} ${c.pais}`.toLowerCase();
+      if (!heno.includes(q)) return false;
+    }
+    return true;
+  });
 
-  state.mostradas = PAGE_SIZE;
+  state.filtradas = aplicarOrden(modoLiviano ? base.filter((c) => c.pais === DEFAULT_COUNTRY) : base);
+  state.mostradas = Math.max(PAGE_SIZE, Math.min(state.mostradas || PAGE_SIZE, state.filtradas.length || PAGE_SIZE));
+
+  if (modoLiviano && state.filtradas.length <= PAGE_SIZE) {
+    state.mostradas = state.filtradas.length || PAGE_SIZE;
+  }
+
   renderizarTarjetas();
   renderizarMapa();
   actualizarEstadisticas();
@@ -1307,12 +1314,30 @@ function alternarFavorito(id) {
 /* ---------------- Eventos ---------------- */
 
 function registrarEventos() {
-  $("#buscar").addEventListener("input", debounce(aplicarFiltros, 250));
-  $("#filtro-pais").addEventListener("change", aplicarFiltros);
-  $("#filtro-region").addEventListener("change", aplicarFiltros);
-  $("#filtro-tipo").addEventListener("change", aplicarFiltros);
-  $("#filtro-video").addEventListener("change", aplicarFiltros);
-  $("#filtro-favoritos").addEventListener("change", aplicarFiltros);
+  $("#buscar").addEventListener("input", () => {
+    state.cargaLiviana = false;
+    debounce(aplicarFiltros, 250)();
+  });
+  $("#filtro-pais").addEventListener("change", () => {
+    state.cargaLiviana = false;
+    aplicarFiltros();
+  });
+  $("#filtro-region").addEventListener("change", () => {
+    state.cargaLiviana = false;
+    aplicarFiltros();
+  });
+  $("#filtro-tipo").addEventListener("change", () => {
+    state.cargaLiviana = false;
+    aplicarFiltros();
+  });
+  $("#filtro-video").addEventListener("change", () => {
+    state.cargaLiviana = false;
+    aplicarFiltros();
+  });
+  $("#filtro-favoritos").addEventListener("change", () => {
+    state.cargaLiviana = false;
+    aplicarFiltros();
+  });
   $("#orden-camaras").addEventListener("change", (e) => {
     state.ordenActual = e.target.value;
     localStorage.setItem("radar-vial-orden", state.ordenActual);
@@ -1331,13 +1356,14 @@ function registrarEventos() {
   });
   $("#btn-limpiar").addEventListener("click", () => {
     $("#buscar").value = "";
-    $("#filtro-pais").value = "";
+    $("#filtro-pais").value = DEFAULT_COUNTRY;
     $("#filtro-region").value = "";
     $("#filtro-tipo").value = "";
     $("#filtro-video").checked = false;
     $("#filtro-favoritos").checked = false;
     $("#vista-camaras").value = "todas";
     state.vistaActual = "todas";
+    state.cargaLiviana = true;
     state.cargaExpandida = false;
     localStorage.setItem("radar-vial-vista", "todas");
     state.filtroCercania = false;
@@ -1544,6 +1570,9 @@ document.addEventListener("DOMContentLoaded", () => {
     state.vistaActual = vista;
     $("#vista-camaras").value = vista;
   }
+  $("#filtro-pais").value = DEFAULT_COUNTRY;
+  state.cargaLiviana = true;
+  state.mostradas = PAGE_SIZE;
   cargarDatos();
 
   setInterval(() => {
