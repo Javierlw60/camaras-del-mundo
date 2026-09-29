@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camaras Del Mundo</title>
+  <meta name="description" content="Panel de visualización de cámaras públicas del mundo: mapa, instantáneas y transmisiones en directo.">
+
+  <!-- ====== PWA ====== -->
+  <meta name="theme-color" content="#0b1220">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Camaras Del Mundo">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icono-192.png">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ====== Banner de instalación (PWA) ====== -->
+  <div class="banner-instalar" id="banner-instalar" hidden>
+    <div class="banner-texto">
+      <b>📱 Instala Radar Vial en tu dispositivo</b>
+      <span id="banner-detalle">Ábrela como una app real, con icono propio y acceso sin conexión.</span>
+    </div>
+    <div class="banner-acciones">
+      <button class="btn btn-primary" id="btn-instalar-pwa">Instalar</button>
+      <button class="btn" id="btn-ignorar-pwa">Ahora no</button>
+    </div>
+  </div>
+
+  <!-- ====== Cabecera ====== -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">📡</div>
+      <div>
+        <h1>Camaras Del Mundo</h1>
+        <p>Cámaras públicas del mundo · datos abiertos oficiales</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="stat-total">0</b><span>Cámaras</span></div>
+      <div class="stat live"><b id="stat-video">0</b><span>En directo</span></div>
+      <div class="stat"><b id="stat-zonas">0</b><span>Zonas</span></div>
+    </div>
+  </header>
+
+  <!-- ====== Controles ====== -->
+  <section class="toolbar">
+    <div class="search">
+      <span class="icon">🔎</span>
+      <input id="buscar" type="search"
+             placeholder="Buscar por lugar, carretera o ruta (p. ej. I-80, Des Moines…)">
+    </div>
+
+    <select id="filtro-region" aria-label="Filtrar por zona">
+      <option value="">Todas las zonas</option>
+    </select>
+
+    <select id="filtro-tipo" aria-label="Filtrar por tipo">
+      <option value="">Todos los tipos</option>
+    </select>
+
+    <label class="toggle">
+      <input type="checkbox" id="filtro-video"> Solo cámaras en directo
+    </label>
+
+    <label class="toggle">
+      <input type="checkbox" id="filtro-favoritos"> Solo favoritos
+    </label>
+
+    <select id="orden-camaras" aria-label="Orden de cámaras">
+      <option value="pais" selected>Orden: país</option>
+      <option value="cercanas">Orden: más cercanas</option>
+      <option value="region">Orden: zona</option>
+      <option value="nombre">Orden: nombre</option>
+    </select>
+
+    <select id="vista-camaras" aria-label="Vista de cámaras">
+      <option value="todas" selected>Vista: todas</option>
+      <option value="mis">Vista: mis cámaras</option>
+      <option value="favoritas">Vista: favoritas</option>
+      <option value="directo">Vista: en directo</option>
+    </select>
+
+    <select id="calidad-imagen" aria-label="Calidad de imagen">
+      <option value="auto" selected>Calidad automática</option>
+      <option value="baja">Baja</option>
+      <option value="media">Media</option>
+      <option value="alta">Alta</option>
+    </select>
+
+    <select id="intervalo" aria-label="Intervalo de actualización">
+      <option value="30000">Actualizar cada 30 s</option>
+      <option value="45000" selected>Cada 45 s</option>
+      <option value="60000">Cada 60 s</option>
+      <option value="300000">Cada 5 min</option>
+      <option value="0">Sin auto-actualización</option>
+    </select>
+
+    <button class="btn" id="btn-limpiar">Limpiar</button>
+    <button class="btn" id="btn-mi-ubicacion">📍 Cerca de mí</button>
+    <select id="radio-cercania" aria-label="Radio de proximidad">
+      <option value="15">± 15 km</option>
+      <option value="30">± 30 km</option>
+      <option value="60">± 60 km</option>
+      <option value="120" selected>± 120 km</option>
+      <option value="300">± 300 km</option>
+      <option value="500">± 500 km</option>
+    </select>
+    <button class="btn" id="btn-mapa-global">🌍 Ver mapa global</button>
+    <button class="btn" id="btn-actualizar">↻ Recargar datos</button>
+    <button class="btn" id="btn-exportar-favoritos">💾 Exportar favoritos</button>
+    <button class="btn" id="btn-importar-favoritos">📥 Importar favoritos</button>
+    <button class="btn" id="btn-exportar-mis-camaras">🗂️ Exportar mis cámaras</button>
+    <button class="btn" id="btn-importar-mis-camaras">📦 Importar mis cámaras</button>
+    <button class="btn btn-primary" id="btn-anadir">➕ Añadir cámara</button>
+    <input type="file" id="input-importar-favoritos" accept="application/json" hidden>
+    <input type="file" id="input-importar-mis-camaras" accept="application/json" hidden>
+  </section>
+
+  <div class="quick-summary" aria-live="polite">
+    <div class="summary-chip"><span class="summary-label">Favoritas</span><strong id="summary-favoritas">0</strong></div>
+    <div class="summary-chip"><span class="summary-label">Mis cámaras</span><strong id="summary-mis">0</strong></div>
+    <div class="summary-chip"><span class="summary-label">En directo</span><strong id="summary-directo">0</strong></div>
+    <div class="summary-chip"><span class="summary-label">Cercanas</span><strong id="summary-cercanas">0</strong></div>
+  </div>
+
+  <!-- ====== Mapa + rejilla ====== -->
+  <main class="layout">
+    <aside class="map-wrap">
+      <div id="mapa"></div>
+      <div class="map-note">
+        📍 Mapa de ubicaciones · <span id="estado-datos">Conectando con la fuente de datos…</span>
+      </div>
+    </aside>
+
+    <section>
+      <div class="grid" id="rejilla"></div>
+      <div class="more-wrap">
+        <button class="btn" id="btn-mas">Cargar más cámaras</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ====== Modal: vídeo / imagen ====== -->
+  <div class="modal" id="modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <h2 id="titulo-modal">Cámara</h2>
+          <div style="color:var(--muted);font-size:12.5px;margin-top:3px" id="subtitulo-modal"></div>
+        </div>
+        <button class="btn" id="btn-cerrar-modal">✕ Cerrar</button>
+      </div>
+      <div class="modal-body">
+        <video id="reproductor" controls autoplay muted playsinline
+               style="display:none;aspect-ratio:16/9"></video>
+        <img id="imagen-grande" class="big-img" alt="Instantánea ampliada de la cámara">
+        <div class="stream-note" id="nota-stream"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Modal: añadir cámara propia ====== -->
+  <div class="modal" id="modal-propia">
+    <div class="modal-box" style="width:min(620px,96vw)">
+      <div class="modal-head">
+        <h2>➕ Añadir una cámara</h2>
+        <button class="btn" id="btn-cerrar-propia">✕ Cerrar</button>
+      </div>
+      <form id="form-propia">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="full">
+              <label for="prop-nombre">Nombre de la cámara *</label>
+              <input id="prop-nombre" required placeholder="Ej.: Puente del Centro — sentido norte">
+            </div>
+            <div class="full">
+              <label for="prop-url">URL de la imagen (.jpg/.png) o del flujo (.m3u8) *</label>
+              <input id="prop-url" required placeholder="https://…/imagen.jpg  |  https://…/directo.m3u8">
+            </div>
+            <div>
+              <label for="prop-ruta">Carretera / ruta (opcional)</label>
+              <input id="prop-ruta" placeholder="Ej.: A-6 / I-80">
+            </div>
+            <div>
+              <label>Coordenadas (opcional, para el mapa)</label>
+              <div style="display:flex;gap:8px">
+                <input id="prop-lat" type="number" step="any" placeholder="Latitud">
+                <input id="prop-lon" type="number" step="any" placeholder="Longitud">
+              </div>
+            </div>
+          </div>
+          <div class="stream-note">
+            ⚖️ Añade únicamente cámaras de <b>acceso público legal</b> (organismos oficiales,
+            webcams públicas, tus propios dispositivos). No incluyas cámaras privadas ni accesos
+            restringidos. Las cámaras que añadas se guardan solo en este navegador.
+          </div>
+          <div id="prop-error" style="color:var(--danger);font-size:12.5px;margin-top:8px"></div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn" id="btn-cancelar-propia"
+                  onclick="document.getElementById('modal-propia').classList.remove('open')">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">Guardar cámara</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====== Pie ====== -->
+  <footer>
+    <b>Fuente de datos:</b>
+    <a href="https://data.iowadot.gov/maps/traffic-cameras-3" target="_blank" rel="noopener">
+      Iowa Department of Transportation — ITS CCTV Cameras
+    </a>
+    (datos abiertos, actualizados diariamente por el organismo).
+    Las instantáneas y transmisiones se sirven directamente desde los servidores oficiales
+    (<span style="font-family:monospace">atmsqf.iowadot.gov</span> /
+    <span style="font-family:monospace">video2.iowadot.gov</span>).
+
+    <div class="legal">
+      <b>Aviso legal y de privacidad:</b> esta página es un <b>visor</b> de cámaras de tráfico de
+      acceso público con fines informativos (estado de las vías, viajes, meteorología).
+      No realiza grabación, ni reconocimiento facial, ni análisis de matrículas, y no almacena
+      imágenes en ningún servidor. Respeta los términos de uso de cada organismo y la normativa
+      de protección de datos aplicable. Queda prohibido su uso para vigilancia de personas.
+    </div>
+
+    <div style="margin-top:10px">
+      Hecho con Leaflet, hls.js y datos abiertos · <span id="anio"></span> ·
+      <span id="estado-pwa" style="color:var(--accent)">⏳ Activando la PWA…</span>
+      <button class="btn" id="btn-iconos" style="padding:5px 10px;font-size:12px">
+        ⬇️ Generar iconos PNG (para instalar la app)
+      </button>
+    </div>
+  </footer>
+
+  <!-- ====== Librerías ====== -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+  <script src="app.js"></script>
+  <script>document.getElementById("anio").textContent = new Date().getFullYear();</script>
+
+  <!-- ====== PWA: service worker + instalación + iconos ====== -->
+  <script>
+    // 1) Registra el service worker (la app funciona sin conexión)
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").then(async () => {
+          // Espera a que el service worker quede activo y lo muestra en el pie
+          const verEstado = async () => {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            const activo = regs.some((r) => r.active);
+            const etiqueta = document.getElementById("estado-pwa");
+            if (etiqueta) {
+              etiqueta.textContent = activo
+                ? "✅ PWA lista: funciona sin conexión y se puede instalar"
+                : "⏳ Activando la PWA…";
+            }
+            if (!activo) setTimeout(verEstado, 1200);
+          };
+          verEstado();
+        }).catch((err) => {
+          const etiqueta = document.getElementById("estado-pwa");
+          if (etiqueta) etiqueta.textContent = "⚠️ Sin service worker (se necesita https o localhost)";
+          console.warn("Service worker no disponible:", err);
+        });
+      });
+    }
+
+    // 2) Banner de instalación en la primera visita
+    (function () {
+      const banner = document.getElementById("banner-instalar");
+      const detalle = document.getElementById("banner-detalle");
+      const btnInstalar = document.getElementById("btn-instalar-pwa");
+      const btnIgnorar = document.getElementById("btn-ignorar-pwa");
+      const esIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const instalada = window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+      const ignorada = localStorage.getItem("pwa-ofrecida") === "si";
+      let eventoInstalar = null;
+
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        eventoInstalar = e;
+        if (!instalada && !ignorada) banner.hidden = false;
+      });
+
+      // iOS no dispara beforeinstallprompt: damos instrucciones propias
+      if (esIos && !instalada && !ignorada) {
+        detalle.textContent =
+          "En iPhone/iPad: pulsa el botón Compartir (cuadrado con flecha) → " +
+          "'Añadir a pantalla de inicio'.";
+        banner.hidden = false;
+      }
+
+      btnInstalar.addEventListener("click", async () => {
+        if (eventoInstalar) {
+          eventoInstalar.prompt();
+          await eventoInstalar.userChoice;
+          eventoInstalar = null;
+        } else {
+          detalle.textContent = esIos
+            ? "Pulsa Compartir → 'Añadir a pantalla de inicio'."
+            : "En el menú del navegador elige 'Instalar aplicación' o 'Añadir a pantalla de inicio'.";
+          return;
+        }
+        banner.hidden = true;
+        localStorage.setItem("pwa-ofrecida", "si");
+      });
+
+      btnIgnorar.addEventListener("click", () => {
+        banner.hidden = true;
+        localStorage.setItem("pwa-ofrecida", "si");
+      });
+    })();
+
+    // 3) Genera los iconos PNG del manifest (solo hay que hacerlo una vez)
+    document.getElementById("btn-iconos").addEventListener("click", () => {
+      [192, 512].forEach((tam) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = tam;
+        const ctx = canvas.getContext("2d");
+        const r = tam * 0.22;
+
+        // fondo redondeado con degradado
+        const grad = ctx.createLinearGradient(0, 0, tam, tam);
+        grad.addColorStop(0, "#12203a");
+        grad.addColorStop(1, "#0b1220");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(r, 0);
+        ctx.arcTo(tam, 0, tam, tam, r);
+        ctx.arcTo(tam, tam, 0, tam, r);
+        ctx.arcTo(0, tam, 0, 0, r);
+        ctx.arcTo(0, 0, tam, 0, r);
+        ctx.closePath();
+        ctx.fill();
+
+        // anillos de radar
+        ctx.strokeStyle = "#2c405f";
+        ctx.lineWidth = tam * 0.028;
+        [0.34, 0.235, 0.125].forEach((rad) => {
+          ctx.beginPath();
+          ctx.arc(tam / 2, tam / 2, tam * rad, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        // cámara
+        const ac = ctx.createLinearGradient(tam * 0.28, tam * 0.35, tam * 0.72, tam * 0.68);
+        ac.addColorStop(0, "#35d0a5");
+        ac.addColorStop(1, "#4c8dff");
+        ctx.fillStyle = ac;
+        const ancho = tam * 0.42, alto = tam * 0.28;
+        const x = (tam - ancho) / 2, y = tam * 0.38, rr = tam * 0.06;
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + ancho, y, x + ancho, y + alto, rr);
+        ctx.arcTo(x + ancho, y + alto, x, y + alto, rr);
+        ctx.arcTo(x, y + alto, x, y, rr);
+        ctx.arcTo(x, y, x + ancho, y, rr);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#0b1220";
+        ctx.beginPath();
+        ctx.arc(tam / 2, y + alto / 2, tam * 0.09, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#e8eefb";
+        ctx.beginPath();
+        ctx.arc(tam / 2, y + alto / 2, tam * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+
+        // punto de ubicación
+        ctx.fillStyle = "#35d0a5";
+        ctx.beginPath();
+        ctx.arc(tam / 2, tam * 0.8, tam * 0.045, 0, Math.PI * 2);
+        ctx.fill();
+
+        const enlace = document.createElement("a");
+        enlace.href = canvas.toDataURL("image/png");
+        enlace.download = `icono-${tam}.png`;
+        enlace.click();
+      });
+    });
+  </script>
+</body>
+</html>

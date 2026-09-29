@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12203a"/>
+      <stop offset="100%" stop-color="#0b1220"/>
+    </linearGradient>
+    <linearGradient id="acento" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#35d0a5"/>
+      <stop offset="100%" stop-color="#4c8dff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#fondo)"/>
+  <circle cx="256" cy="256" r="176" fill="none" stroke="#24344f" stroke-width="14"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#2c405f" stroke-width="12"/>
+  <circle cx="256" cy="256" r="64" fill="none" stroke="#3a5477" stroke-width="10"/>
+  <path d="M256 256 L256 80 A176 176 0 0 1 400 168 Z" fill="url(#acento)" opacity="0.28"/>
+  <rect x="150" y="196" width="212" height="140" rx="26" fill="url(#acento)"/>
+  <rect x="196" y="164" width="88" height="46" rx="16" fill="url(#acento)"/>
+  <circle cx="256" cy="266" r="46" fill="#0b1220"/>
+  <circle cx="256" cy="266" r="26" fill="#e8eefb"/>
+  <circle cx="330" cy="226" r="10" fill="#0b1220"/>
+  <circle cx="256" cy="410" r="18" fill="#35d0a5"/>
+</svg>
