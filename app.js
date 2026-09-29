@@ -497,12 +497,14 @@ async function cargarDatos() {
 }
 
 function debeExpandirDatosGlobales() {
+  if (!state.mundo.length) return true;
+
   const q = ($("#buscar")?.value || "").trim();
   const pais = $("#filtro-pais")?.value || "";
   const region = $("#filtro-region")?.value || "";
   const tipo = $("#filtro-tipo")?.value || "";
 
-  return Boolean(q || pais || region || tipo);
+  return Boolean(q || pais || region || tipo || state.cargaExpandida);
 }
 
 function refrescarVista() {
@@ -745,13 +747,9 @@ function aplicarOrden(camaras) {
 function aplicarFiltros() {
   poblarFiltros();
 
-  if (debeExpandirDatosGlobales() && !state.cargaExpandida) {
+  if (!state.cargaExpandida && debeExpandirDatosGlobales()) {
     state.cargaExpandida = true;
     cargarCamaraDelMundo();
-  }
-
-  if (!debeExpandirDatosGlobales() && state.cargaExpandida) {
-    state.cargaExpandida = false;
   }
 
   const q = ($("#buscar").value || "").trim().toLowerCase();
