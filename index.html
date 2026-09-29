@@ -288,7 +288,29 @@
       const esIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
       const instalada = window.matchMedia("(display-mode: standalone)").matches ||
         window.navigator.standalone === true;
-      const ignorada = localStorage.getItem("pwa-ofrecida") === "si";
+      const clavePwa = "pwa-ofrecida";
+      const unaSemanaMs = 1000 * 60 * 60 * 24 * 7;
+
+      const hayOcultoTemporal = () => {
+        const raw = localStorage.getItem(clavePwa);
+        if (!raw) return false;
+
+        if (raw === "si") return true;
+
+        try {
+          const dato = JSON.parse(raw);
+          if (!dato || typeof dato.ts !== "number") return false;
+          return Date.now() - dato.ts < unaSemanaMs;
+        } catch {
+          return false;
+        }
+      };
+
+      const guardarOculto = () => {
+        localStorage.setItem(clavePwa, JSON.stringify({ ts: Date.now() }));
+      };
+
+      const ignorada = hayOcultoTemporal();
       let eventoInstalar = null;
 
       window.addEventListener("beforeinstallprompt", (e) => {
@@ -314,15 +336,14 @@
           detalle.textContent = esIos
             ? "Pulsa Compartir → 'Añadir a pantalla de inicio'."
             : "En el menú del navegador elige 'Instalar aplicación' o 'Añadir a pantalla de inicio'.";
-          return;
         }
         banner.hidden = true;
-        localStorage.setItem("pwa-ofrecida", "si");
+        guardarOculto();
       });
 
       btnIgnorar.addEventListener("click", () => {
         banner.hidden = true;
-        localStorage.setItem("pwa-ofrecida", "si");
+        guardarOculto();
       });
     })();
 
