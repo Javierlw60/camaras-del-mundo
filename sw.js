@@ -5,9 +5,9 @@
    ========================================================= */
 "use strict";
 
-const CACHE_STATIC = "radar-vial-estatico-v4";
-const CACHE_DATOS = "radar-vial-datos-v4";
-const CACHE_IMAGENES = "radar-vial-imagenes-v4";
+const CACHE_STATIC = "radar-vial-estatico-v5";
+const CACHE_DATOS = "radar-vial-datos-v5";
+const CACHE_IMAGENES = "radar-vial-imagenes-v5";
 
 const SHELL = [
   "./",
