@@ -15,6 +15,13 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icono.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icono-192.png">
+  <script>
+    // Captura el aviso de instalación lo antes posible (puede llegar antes que el resto de scripts)
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      window.__eventoInstalar = e;
+    });
+  </script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
@@ -311,7 +318,8 @@
       };
 
       const ignorada = hayOcultoTemporal();
-      let eventoInstalar = null;
+      let eventoInstalar = window.__eventoInstalar || null;
+      if (eventoInstalar && !instalada && !ignorada) banner.hidden = false;
 
       window.addEventListener("beforeinstallprompt", (e) => {
         e.preventDefault();
