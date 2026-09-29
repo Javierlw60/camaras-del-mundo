@@ -1,7 +1,7 @@
 {
-  "name": "Radar Vial — Cámaras de tráfico públicas",
-  "short_name": "Radar Vial",
-  "description": "Panel de cámaras de tráfico y webcams públicas de todo el mundo: mapa, instantáneas y transmisiones en directo.",
+  "name": "Camaras Del Mundo",
+  "short_name": "Camaras Del Mundo",
+  "description": "Cámaras públicas del mundo: mapa, instantáneas y transmisiones en directo.",
   "lang": "es",
   "dir": "ltr",
   "id": "/",
