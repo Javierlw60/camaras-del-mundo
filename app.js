@@ -482,29 +482,19 @@ async function cargarDatos() {
 
   cargarPropias();
   state.usa = usa;
-  state.cargaExpandida = false;
+  state.cargaExpandida = true;
   refrescarVista();
   setStatus(usa.length
     ? `${VERSION} · Datos oficiales actualizados · ${new Date().toLocaleTimeString("es-ES")}`
     : "Sin conexión con la fuente de datos");
   state.cargando = false;
 
-  // 3) Dataset mundial: solo cuando el usuario realmente pide ampliar la búsqueda.
-  if (debeExpandirDatosGlobales()) {
-    state.cargaExpandida = true;
-    cargarCamaraDelMundo();
-  }
+  // 3) Dataset mundial: se carga por defecto para mantener la vista completa del mapa mundial.
+  cargarCamaraDelMundo();
 }
 
 function debeExpandirDatosGlobales() {
-  if (!state.mundo.length) return true;
-
-  const q = ($("#buscar")?.value || "").trim();
-  const pais = $("#filtro-pais")?.value || "";
-  const region = $("#filtro-region")?.value || "";
-  const tipo = $("#filtro-tipo")?.value || "";
-
-  return Boolean(q || pais || region || tipo || state.cargaExpandida);
+  return true;
 }
 
 function refrescarVista() {
@@ -746,11 +736,6 @@ function aplicarOrden(camaras) {
 
 function aplicarFiltros() {
   poblarFiltros();
-
-  if (!state.cargaExpandida && debeExpandirDatosGlobales()) {
-    state.cargaExpandida = true;
-    cargarCamaraDelMundo();
-  }
 
   const q = ($("#buscar").value || "").trim().toLowerCase();
   const pais = $("#filtro-pais").value;
