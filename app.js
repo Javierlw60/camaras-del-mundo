@@ -1161,11 +1161,11 @@ function abrirModal() {
   modal.classList.add("open");
 
   // En PWA/standalone, el gesto de volver del móvil debe cerrar la vista
-  // abierta en lugar de salir de la aplicación. Guardamos un estado de
-  // historial para interceptar el evento de navegación del navegador.
-  const estadoActual = window.history.state;
-  if (!estadoActual || !estadoActual.modalAbierto) {
-    window.history.pushState({ modalAbierto: true }, "", window.location.href);
+  // actual y no salir de la aplicación. Por eso se crea una entrada real
+  // del historial antes de abrir el modal.
+  const url = new URL(window.location.href);
+  if (!url.hash || url.hash !== "#modal-abierto") {
+    window.history.pushState({ modalAbierto: true }, "", `${url.pathname}${url.search}#modal-abierto`);
   }
 
   requestAnimationFrame(() => {
@@ -1188,8 +1188,8 @@ function cerrarModal() {
   delete img.dataset.raw;
   img.style.display = "none";
 
-  const estado = window.history.state;
-  if (estado && estado.modalAbierto) {
+  const url = new URL(window.location.href);
+  if (url.hash === "#modal-abierto" && window.history.state && window.history.state.modalAbierto) {
     window.history.back();
   }
 }
@@ -1419,7 +1419,15 @@ function registrarEventos() {
 
     if (modal.classList.contains("open")) {
       e.preventDefault();
-      cerrarModal();
+      const video = $("#reproductor");
+      video.pause();
+      if (hlsActivo) { hlsActivo.destroy(); hlsActivo = null; }
+      video.removeAttribute("src");
+      video.load();
+      modal.classList.remove("open");
+      const img = $("#imagen-grande");
+      delete img.dataset.raw;
+      img.style.display = "none";
       return;
     }
 
