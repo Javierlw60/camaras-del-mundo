@@ -126,19 +126,14 @@
     <input type="file" id="input-importar-mis-camaras" accept="application/json" hidden>
   </section>
 
-  <div class="quick-summary" aria-live="polite">
-    <div class="summary-chip"><span class="summary-label">Favoritas</span><strong id="summary-favoritas">0</strong></div>
-    <div class="summary-chip"><span class="summary-label">Mis cámaras</span><strong id="summary-mis">0</strong></div>
-    <div class="summary-chip"><span class="summary-label">En directo</span><strong id="summary-directo">0</strong></div>
-    <div class="summary-chip"><span class="summary-label">Cercanas</span><strong id="summary-cercanas">0</strong></div>
-  </div>
-
   <!-- ====== Mapa + rejilla ====== -->
   <main class="layout">
     <aside class="map-wrap">
       <div id="mapa"></div>
-      <div class="map-note">
-        📍 Mapa de ubicaciones · <span id="estado-datos">Conectando con la fuente de datos…</span>
+      <div class="map-layers" aria-label="Capas del mapa">
+        <button class="map-layer is-active" type="button" data-layer="Calles">Calles</button>
+        <button class="map-layer" type="button" data-layer="Satelital">Satelital</button>
+        <button class="map-layer" type="button" data-layer="Topográfico">Topográfico</button>
       </div>
     </aside>
 
@@ -217,32 +212,8 @@
     </div>
   </div>
 
-  <!-- ====== Pie ====== -->
-  <footer>
-    <b>Fuente de datos:</b>
-    <a href="https://data.iowadot.gov/maps/traffic-cameras-3" target="_blank" rel="noopener">
-      Iowa Department of Transportation — ITS CCTV Cameras
-    </a>
-    (datos abiertos, actualizados diariamente por el organismo).
-    Las instantáneas y transmisiones se sirven directamente desde los servidores oficiales
-    (<span style="font-family:monospace">atmsqf.iowadot.gov</span> /
-    <span style="font-family:monospace">video2.iowadot.gov</span>).
-
-    <div class="legal">
-      <b>Aviso legal y de privacidad:</b> esta página es un <b>visor</b> de cámaras de tráfico de
-      acceso público con fines informativos (estado de las vías, viajes, meteorología).
-      No realiza grabación, ni reconocimiento facial, ni análisis de matrículas, y no almacena
-      imágenes en ningún servidor. Respeta los términos de uso de cada organismo y la normativa
-      de protección de datos aplicable. Queda prohibido su uso para vigilancia de personas.
-    </div>
-
-    <div style="margin-top:10px">
-      Hecho con Leaflet, hls.js y datos abiertos · <span id="anio"></span> ·
-      <span id="estado-pwa" style="color:var(--accent)">⏳ Activando la PWA…</span>
-      <button class="btn" id="btn-iconos" style="padding:5px 10px;font-size:12px">
-        ⬇️ Generar iconos PNG (para instalar la app)
-      </button>
-    </div>
+  <footer class="site-footer">
+    <div>© Camaras Del Mundo - Todos los derechos reservados - desarrollado por JD</div>
   </footer>
 
   <!-- ====== Librerías ====== -->
@@ -250,12 +221,15 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
   <script src="app.js"></script>
-  <script>document.getElementById("anio").textContent = new Date().getFullYear();</script>
 
   <!-- ====== PWA: service worker + instalación + iconos ====== -->
   <script>
-    // 1) Registra el service worker (la app funciona sin conexión)
-    if ("serviceWorker" in navigator) {
+    // 1) Registra el service worker solo fuera de la vista local/preview.
+    //    Eso evita que la previsualización quede pegada a una versión vieja en caché.
+    const esVistaLocal = window.location.protocol === "file:" ||
+      ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+    if ("serviceWorker" in navigator && !esVistaLocal) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("sw.js").then(async () => {
           // Espera a que el service worker quede activo y lo muestra en el pie
@@ -277,6 +251,8 @@
           console.warn("Service worker no disponible:", err);
         });
       });
+    } else if ("serviceWorker" in navigator) {
+      console.log("PWA desactivada en vista local para evitar cachés viejas");
     }
 
     // 2) Banner de instalación en la primera visita
@@ -348,72 +324,75 @@
     })();
 
     // 3) Genera los iconos PNG del manifest (solo hay que hacerlo una vez)
-    document.getElementById("btn-iconos").addEventListener("click", () => {
-      [192, 512].forEach((tam) => {
-        const canvas = document.createElement("canvas");
-        canvas.width = canvas.height = tam;
-        const ctx = canvas.getContext("2d");
-        const r = tam * 0.22;
+    const btnIconos = document.getElementById("btn-iconos");
+    if (btnIconos) {
+      btnIconos.addEventListener("click", () => {
+        [192, 512].forEach((tam) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = canvas.height = tam;
+          const ctx = canvas.getContext("2d");
+          const r = tam * 0.22;
 
-        // fondo redondeado con degradado
-        const grad = ctx.createLinearGradient(0, 0, tam, tam);
-        grad.addColorStop(0, "#12203a");
-        grad.addColorStop(1, "#0b1220");
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.moveTo(r, 0);
-        ctx.arcTo(tam, 0, tam, tam, r);
-        ctx.arcTo(tam, tam, 0, tam, r);
-        ctx.arcTo(0, tam, 0, 0, r);
-        ctx.arcTo(0, 0, tam, 0, r);
-        ctx.closePath();
-        ctx.fill();
-
-        // anillos de radar
-        ctx.strokeStyle = "#2c405f";
-        ctx.lineWidth = tam * 0.028;
-        [0.34, 0.235, 0.125].forEach((rad) => {
+          // fondo redondeado con degradado
+          const grad = ctx.createLinearGradient(0, 0, tam, tam);
+          grad.addColorStop(0, "#12203a");
+          grad.addColorStop(1, "#0b1220");
+          ctx.fillStyle = grad;
           ctx.beginPath();
-          ctx.arc(tam / 2, tam / 2, tam * rad, 0, Math.PI * 2);
-          ctx.stroke();
+          ctx.moveTo(r, 0);
+          ctx.arcTo(tam, 0, tam, tam, r);
+          ctx.arcTo(tam, tam, 0, tam, r);
+          ctx.arcTo(0, tam, 0, 0, r);
+          ctx.arcTo(0, 0, tam, 0, r);
+          ctx.closePath();
+          ctx.fill();
+
+          // anillos de radar
+          ctx.strokeStyle = "#2c405f";
+          ctx.lineWidth = tam * 0.028;
+          [0.34, 0.235, 0.125].forEach((rad) => {
+            ctx.beginPath();
+            ctx.arc(tam / 2, tam / 2, tam * rad, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+
+          // cámara
+          const ac = ctx.createLinearGradient(tam * 0.28, tam * 0.35, tam * 0.72, tam * 0.68);
+          ac.addColorStop(0, "#35d0a5");
+          ac.addColorStop(1, "#4c8dff");
+          ctx.fillStyle = ac;
+          const ancho = tam * 0.42, alto = tam * 0.28;
+          const x = (tam - ancho) / 2, y = tam * 0.38, rr = tam * 0.06;
+          ctx.beginPath();
+          ctx.moveTo(x + rr, y);
+          ctx.arcTo(x + ancho, y, x + ancho, y + alto, rr);
+          ctx.arcTo(x + ancho, y + alto, x, y + alto, rr);
+          ctx.arcTo(x, y + alto, x, y, rr);
+          ctx.arcTo(x, y, x + ancho, y, rr);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#0b1220";
+          ctx.beginPath();
+          ctx.arc(tam / 2, y + alto / 2, tam * 0.09, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#e8eefb";
+          ctx.beginPath();
+          ctx.arc(tam / 2, y + alto / 2, tam * 0.05, 0, Math.PI * 2);
+          ctx.fill();
+
+          // punto de ubicación
+          ctx.fillStyle = "#35d0a5";
+          ctx.beginPath();
+          ctx.arc(tam / 2, tam * 0.8, tam * 0.045, 0, Math.PI * 2);
+          ctx.fill();
+
+          const enlace = document.createElement("a");
+          enlace.href = canvas.toDataURL("image/png");
+          enlace.download = `icono-${tam}.png`;
+          enlace.click();
         });
-
-        // cámara
-        const ac = ctx.createLinearGradient(tam * 0.28, tam * 0.35, tam * 0.72, tam * 0.68);
-        ac.addColorStop(0, "#35d0a5");
-        ac.addColorStop(1, "#4c8dff");
-        ctx.fillStyle = ac;
-        const ancho = tam * 0.42, alto = tam * 0.28;
-        const x = (tam - ancho) / 2, y = tam * 0.38, rr = tam * 0.06;
-        ctx.beginPath();
-        ctx.moveTo(x + rr, y);
-        ctx.arcTo(x + ancho, y, x + ancho, y + alto, rr);
-        ctx.arcTo(x + ancho, y + alto, x, y + alto, rr);
-        ctx.arcTo(x, y + alto, x, y, rr);
-        ctx.arcTo(x, y, x + ancho, y, rr);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = "#0b1220";
-        ctx.beginPath();
-        ctx.arc(tam / 2, y + alto / 2, tam * 0.09, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#e8eefb";
-        ctx.beginPath();
-        ctx.arc(tam / 2, y + alto / 2, tam * 0.05, 0, Math.PI * 2);
-        ctx.fill();
-
-        // punto de ubicación
-        ctx.fillStyle = "#35d0a5";
-        ctx.beginPath();
-        ctx.arc(tam / 2, tam * 0.8, tam * 0.045, 0, Math.PI * 2);
-        ctx.fill();
-
-        const enlace = document.createElement("a");
-        enlace.href = canvas.toDataURL("image/png");
-        enlace.download = `icono-${tam}.png`;
-        enlace.click();
       });
-    });
+    }
   </script>
 </body>
 </html>

@@ -161,6 +161,7 @@ const state = {
   radioCercaniaKm: 120,
   ordenActual: "pais",
   vistaActual: "todas",
+  cargaExpandida: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -481,28 +482,45 @@ async function cargarDatos() {
 
   cargarPropias();
   state.usa = usa;
+  state.cargaExpandida = false;
   refrescarVista();
   setStatus(usa.length
     ? `${VERSION} · Datos oficiales actualizados · ${new Date().toLocaleTimeString("es-ES")}`
     : "Sin conexión con la fuente de datos");
   state.cargando = false;
 
-  // 3) Dataset mundial (se carga aparte y va refrescando la vista)
-  cargarCamaraDelMundo();
+  // 3) Dataset mundial: solo cuando el usuario realmente pide ampliar la búsqueda.
+  if (debeExpandirDatosGlobales()) {
+    state.cargaExpandida = true;
+    cargarCamaraDelMundo();
+  }
+}
+
+function debeExpandirDatosGlobales() {
+  const q = ($("#buscar")?.value || "").trim();
+  const pais = $("#filtro-pais")?.value || "";
+  const region = $("#filtro-region")?.value || "";
+  const tipo = $("#filtro-tipo")?.value || "";
+
+  return Boolean(q || pais || region || tipo);
 }
 
 function refrescarVista() {
-  const argentina = CAMARAS_ARGENTINA.map((c) => ({
-    ...c,
-    pais: c.pais || "Argentina",
-    propia: false,
-  }));
-  state.camaras = deduplicarCamaras([
-    ...state.propias,
-    ...argentina,
-    ...state.mundo,
-    ...(state.usa || []),
-  ]);
+  const base = [...state.propias, ...(state.usa || [])];
+
+  const expandido = state.cargaExpandida
+    ? [
+        ...base,
+        ...CAMARAS_ARGENTINA.map((c) => ({
+          ...c,
+          pais: c.pais || "Argentina",
+          propia: false,
+        })),
+        ...state.mundo,
+      ]
+    : base;
+
+  state.camaras = deduplicarCamaras(expandido);
   poblarFiltros();
   aplicarFiltros();
 }
@@ -631,8 +649,8 @@ function convertirWebcam(f, cod, vistas) {
 }
 
 function setStatus(texto) {
-  const el = $("#estado-datos");
-  if (el) el.textContent = texto;
+  // El texto de estado del mapa se oculta para mantener la interfaz limpia.
+  return texto;
 }
 
 function ajustarCalidadImagen(url) {
@@ -727,6 +745,15 @@ function aplicarOrden(camaras) {
 function aplicarFiltros() {
   poblarFiltros();
 
+  if (debeExpandirDatosGlobales() && !state.cargaExpandida) {
+    state.cargaExpandida = true;
+    cargarCamaraDelMundo();
+  }
+
+  if (!debeExpandirDatosGlobales() && state.cargaExpandida) {
+    state.cargaExpandida = false;
+  }
+
   const q = ($("#buscar").value || "").trim().toLowerCase();
   const pais = $("#filtro-pais").value;
   const region = $("#filtro-region").value;
@@ -782,10 +809,15 @@ function actualizarEstadisticas() {
   const elPaises = $("#stat-paises");
   if (elPaises) elPaises.textContent = new Set(state.filtradas.map((c) => c.pais).filter(Boolean)).size;
 
-  $("#summary-favoritas").textContent = state.favoritos.length.toLocaleString("es-ES");
-  $("#summary-mis").textContent = state.propias.length.toLocaleString("es-ES");
-  $("#summary-directo").textContent = state.camaras.filter((c) => c.video).length.toLocaleString("es-ES");
-  $("#summary-cercanas").textContent = cercanas.toLocaleString("es-ES");
+  const elFavoritas = $("#summary-favoritas");
+  const elMis = $("#summary-mis");
+  const elDirecto = $("#summary-directo");
+  const elCercanas = $("#summary-cercanas");
+
+  if (elFavoritas) elFavoritas.textContent = state.favoritos.length.toLocaleString("es-ES");
+  if (elMis) elMis.textContent = state.propias.length.toLocaleString("es-ES");
+  if (elDirecto) elDirecto.textContent = state.camaras.filter((c) => c.video).length.toLocaleString("es-ES");
+  if (elCercanas) elCercanas.textContent = cercanas.toLocaleString("es-ES");
 }
 /* ---------------- Tarjetas ---------------- */
 
@@ -965,12 +997,13 @@ function renderizarMapa() {
     state.mapa = L.map("mapa", {
       scrollWheelZoom: true,
       worldCopyJump: true,
-      attributionControl: true,
+      attributionControl: false,
     }).setView([20, 0], 2);
 
     const capaCalle = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; OpenStreetMap',
+      attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
+      subdomains: "abc",
       detectRetina: true,
     });
 
@@ -1000,12 +1033,6 @@ function renderizarMapa() {
     };
 
     state.capaActiva = "Calles";
-    state.layerControl = L.control.layers(state.capasBase, null, {
-      collapsed: false,
-      position: "topright",
-    }).addTo(state.mapa);
-
-    L.control.scale({ metric: true, imperial: false, position: "bottomleft" }).addTo(state.mapa);
 
     function aplicarTemaMapa() {
       const contenedor = state.mapa?.getContainer();
@@ -1014,11 +1041,10 @@ function renderizarMapa() {
     }
 
     function sincronizarControlCapas(nombre) {
-      const radios = Array.from(document.querySelectorAll(".leaflet-control-layers-selector"));
-      radios.forEach((input) => {
-        const label = input.closest("label");
-        const texto = label ? label.textContent.trim() : "";
-        input.checked = texto === nombre;
+      document.querySelectorAll(".map-layer").forEach((boton) => {
+        const activo = boton.dataset.layer === nombre;
+        boton.classList.toggle("is-active", activo);
+        boton.setAttribute("aria-pressed", String(activo));
       });
     }
 
@@ -1031,6 +1057,10 @@ function renderizarMapa() {
       state.capaActiva = nombre;
       sincronizarControlCapas(nombre);
     }
+
+    document.querySelectorAll(".map-layer").forEach((boton) => {
+      boton.addEventListener("click", () => cambiarCapaBase(boton.dataset.layer));
+    });
 
     state.mapa.on("baselayerchange", (ev) => {
       state.capaActiva = ev.name;
@@ -1047,9 +1077,10 @@ function renderizarMapa() {
     });
     state.mapa.addLayer(state.marcadores);
 
-    state.mapaDarkMode = false;
+    state.mapaDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const mapaNode = state.mapa.getContainer();
-    if (mapaNode) mapaNode.classList.remove("map-dark");
+    if (mapaNode) mapaNode.classList.toggle("map-dark", Boolean(state.mapaDarkMode));
+    aplicarTemaMapa();
   }
 
   state.mapa.invalidateSize();
@@ -1326,6 +1357,7 @@ function registrarEventos() {
     $("#filtro-favoritos").checked = false;
     $("#vista-camaras").value = "todas";
     state.vistaActual = "todas";
+    state.cargaExpandida = false;
     localStorage.setItem("radar-vial-vista", "todas");
     state.filtroCercania = false;
     actualizarBotonUbicacion();
