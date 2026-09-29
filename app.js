@@ -1071,9 +1071,7 @@ function renderizarMapa() {
   state.marcadores.clearLayers();
 
   const conCoords = state.filtradas.filter((c) => coordenadasValidas(c.lat, c.lon));
-  const maxMarcadores = 700;
-  const paso = Math.max(1, Math.ceil(conCoords.length / maxMarcadores));
-  const muestra = paso > 1 ? conCoords.filter((_, i) => i % paso === 0).slice(0, maxMarcadores) : conCoords.slice(0, maxMarcadores);
+  const muestra = conCoords;
 
   muestra.forEach((c) => {
     const marca = L.marker([c.lat, c.lon]);
