@@ -1159,6 +1159,15 @@ function abrirWeb(id) {
 function abrirModal() {
   const modal = $("#modal");
   modal.classList.add("open");
+
+  // En PWA/standalone, el gesto de volver del móvil debe cerrar la vista
+  // abierta en lugar de salir de la aplicación. Guardamos un estado de
+  // historial para interceptar el evento de navegación del navegador.
+  const estadoActual = window.history.state;
+  if (!estadoActual || !estadoActual.modalAbierto) {
+    window.history.pushState({ modalAbierto: true }, "", window.location.href);
+  }
+
   requestAnimationFrame(() => {
     const primerControl = modal.querySelector("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
     if (primerControl) primerControl.focus();
@@ -1166,7 +1175,10 @@ function abrirModal() {
 }
 
 function cerrarModal() {
-  $("#modal").classList.remove("open");
+  const modal = $("#modal");
+  if (!modal.classList.contains("open")) return;
+
+  modal.classList.remove("open");
   const video = $("#reproductor");
   video.pause();
   if (hlsActivo) { hlsActivo.destroy(); hlsActivo = null; }
@@ -1175,6 +1187,11 @@ function cerrarModal() {
   const img = $("#imagen-grande");
   delete img.dataset.raw;
   img.style.display = "none";
+
+  const estado = window.history.state;
+  if (estado && estado.modalAbierto) {
+    window.history.back();
+  }
 }
 
 /* ---------------- Cámaras propias del usuario ---------------- */
@@ -1395,6 +1412,21 @@ function registrarEventos() {
   $("#btn-cerrar-modal").addEventListener("click", cerrarModal);
   $("#modal").addEventListener("click", (e) => {
     if (e.target.id === "modal") cerrarModal();
+  });
+  window.addEventListener("popstate", (e) => {
+    const modal = $("#modal");
+    const modalPropia = $("#modal-propia");
+
+    if (modal.classList.contains("open")) {
+      e.preventDefault();
+      cerrarModal();
+      return;
+    }
+
+    if (modalPropia.classList.contains("open")) {
+      e.preventDefault();
+      modalPropia.classList.remove("open");
+    }
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
