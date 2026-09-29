@@ -117,13 +117,15 @@ body {
 
 select, .btn {
   padding: 11px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--panel);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text);
   font-size: 13.5px;
   cursor: pointer;
   outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 1px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
 }
 
 #radio-cercania {
@@ -278,11 +280,34 @@ select:focus-visible {
 
 #mapa { height: clamp(360px, 68vh, 760px); background: #dfeaf3; }
 
-.map-note {
-  padding: 10px 14px;
-  font-size: 12px;
-  color: var(--muted);
+.map-layers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 14px 14px;
   border-top: 1px solid var(--line);
+  background: rgba(13, 21, 32, 0.75);
+}
+
+.map-layer {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.map-layer.is-active {
+  background: linear-gradient(135deg, rgba(53, 208, 165, 0.9), rgba(76, 141, 255, 0.9));
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #08273a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 10px rgba(53, 208, 165, 0.25);
 }
 
 .grid {
@@ -477,23 +502,27 @@ select:focus-visible {
 }
 
 /* ---------- Pie ---------- */
-footer {
+.site-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border-top: 1px solid var(--line);
   padding: 18px clamp(16px, 4vw, 42px) 34px;
   color: var(--muted);
   font-size: 12.5px;
-  line-height: 1.7;
+  line-height: 1.5;
+  text-align: center;
 }
 
-footer a { color: var(--accent-2); text-decoration: none; }
-footer a:hover { text-decoration: underline; }
+.site-footer__meta {
+  font-weight: 600;
+  color: var(--text);
+}
 
-.legal {
-  margin-top: 10px;
-  padding: 12px 14px;
-  border-left: 3px solid var(--warn);
-  background: rgba(255, 182, 72, 0.08);
-  border-radius: 8px;
+.site-footer__byline {
+  opacity: 0.9;
 }
 
 /* ---------- Banner de instalación (PWA) ---------- */
@@ -611,7 +640,7 @@ footer a:hover { text-decoration: underline; }
   .banner-acciones { justify-content: center; }
   .banner-acciones .btn { flex: 1; padding: 13px; }
 
-  footer { padding: 16px 14px calc(28px + env(safe-area-inset-bottom)); }
+  .site-footer { padding: 16px 14px calc(28px + env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 380px) {
